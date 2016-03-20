@@ -20,10 +20,12 @@ rootpw --iscrypted <%= root_pass %>
 <%= @host.diskLayout %>
  
 # First interface IP configuration
+<% subnet = @host.subnet -%>
+<% identifier = @host.provision_interface.identifier.present? ? @host.provision_interface.identifier : 'vmnic0'%>
 <% if subnet.respond_to?(:dhcp_boot_mode?) && subnet.dhcp_boot_mode? -%>
-  network --bootproto=dhcp --device=vmnic0
+  network --bootproto=dhcp --device=<%= identifier -%>
 <% else -%>
-  network --bootproto=static --ip=<%= @host.ip -%> --gateway=<%= @host.subnet.gateway -%> --nameserver=<%= @host.subnet.dns_primary  -%> --netmask=<%= @host.subnet.mask -%> --hostname=<%= @host.name -%> --device=vmnic0 --addvmportgroup=0
+  network --bootproto=static --ip=<%= @host.ip -%> --gateway=<%= subnet.gateway -%> --nameserver=<%= subnet.dns_primary  -%> --netmask=<%= subnet.mask -%> --hostname=<%= @host.name -%> --device=<%= identifier -%> --addvmportgroup=0
 <% end -%>
 
 %post --interpreter=busybox
@@ -47,7 +49,7 @@ echo restrict default kod nomodify notrap noquerynopeer > /etc/ntp.conf
 echo restrict 127.0.0.1 >> /etc/ntp.conf
 echo server <%= @host.params['ntp-server'] || '0.pool.ntp.org' %> >> /etc/ntp.conf
 echo driftfile /var/lib/ntp/drift >> /etc/ntp.conf
-/sbin/chkconfig –level 345 ntpd on
+/sbin/chkconfig -level 345 ntpd on
 /etc/init.d/ntpd stop
 /etc/init.d/ntpd start
 
